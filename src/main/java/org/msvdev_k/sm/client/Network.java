@@ -70,7 +70,7 @@ public class Network {
             }
             outputStream.writeUTF(ServerCommandConstants.AUTHORIZATION + " " + login + " " + password);
 
-            boolean authenticated = inputStream.readBoolean();
+            boolean authenticated = inputStream.readUTF().startsWith(ServerCommandConstants.AUTHORIZATION_OK);
             if (authenticated) {
                 startReadServerMessages();
             }
