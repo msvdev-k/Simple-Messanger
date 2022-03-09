@@ -3,10 +3,12 @@ package org.msvdev_k.sm.server;
 import org.msvdev_k.sm.CommonConstants;
 import org.msvdev_k.sm.server.authorization.AuthService;
 import org.msvdev_k.sm.server.authorization.InMemoryAuthService;
+import org.msvdev_k.sm.server.authorization.SQLiteAuthService;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -19,7 +21,7 @@ public class Server {
     /**
      * Сервис аутентификации.
      */
-    private final AuthService authService = new InMemoryAuthService();
+    private final AuthService authService = new SQLiteAuthService();
 
     /**
      * Список авторизованных в текущий момент клиентов.
@@ -44,7 +46,7 @@ public class Server {
                 new ClientHandler(this, socket);
             }
 
-        } catch (IOException exception) {
+        } catch (IOException | SQLException exception) {
             System.out.println("Ошибка в работе сервера");
             exception.printStackTrace();
 

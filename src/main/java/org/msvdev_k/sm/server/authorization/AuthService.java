@@ -1,6 +1,8 @@
 package org.msvdev_k.sm.server.authorization;
 
 
+import java.sql.SQLException;
+
 /**
  * Интерфейс, описывающий сервис аутентификации на стороне сервера.
  */
@@ -9,7 +11,7 @@ public interface AuthService {
     /**
      * Запуск сервиса.
      */
-    void start();
+    void start() throws SQLException;
 
 
     /**
