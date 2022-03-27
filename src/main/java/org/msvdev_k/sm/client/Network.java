@@ -3,10 +3,10 @@ package org.msvdev_k.sm.client;
 import org.msvdev_k.sm.CommonConstants;
 import org.msvdev_k.sm.server.ServerCommandConstants;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
+import java.util.LinkedList;
+import java.util.List;
 
 public class Network {
     private Socket socket;
@@ -15,31 +15,51 @@ public class Network {
 
     private final ChatController controller;
 
+    /**
+     * Путь к файлу, содержащему историю сообщений.
+     */
+    private File historyFile;
+
+    /**
+     * Константа, определяющая количество последних строк истории чата отображаемых
+     * при авторизации пользователя.
+     */
+    private static final int COUNT_OF_LAST_MESSAGE = 100;
+
+
     public Network(ChatController chatController) {
         this.controller = chatController;
     }
 
+
     private void startReadServerMessages() throws IOException {
         new Thread(() -> {
+
+            displayHistory();
+
             try {
                 while (true) {
                     String messageFromServer = inputStream.readUTF();
                     System.out.println(messageFromServer);
+
                     if (messageFromServer.startsWith(ServerCommandConstants.ENTER)) {
                         String[] client = messageFromServer.split("\\s");
                         controller.displayClient(client[1]);
-                        controller.displayMessage("Пользователь " + client[1] + " зашел в чат");
+                        displayMessage("Пользователь " + client[1] + " зашел в чат", false);
+
                     } else if (messageFromServer.startsWith(ServerCommandConstants.EXIT)) {
                         String[] client = messageFromServer.split("\\s");
                         controller.removeClient(client[1]);
-                        controller.displayMessage(client[1] + " покинул чат");
+                        displayMessage(client[1] + " покинул чат", false);
+
                     } else if (messageFromServer.startsWith(ServerCommandConstants.CLIENTS)) {
                         String[] client = messageFromServer.split("\\s");
                         for (int i = 1; i < client.length; i++) {
                             controller.displayClient(client[i]);
                         }
+
                     } else {
-                        controller.displayMessage(messageFromServer);
+                        displayMessage(messageFromServer, true);
                     }
                 }
             } catch (IOException exception) {
@@ -47,6 +67,61 @@ public class Network {
             }
         }).start();
     }
+
+
+    /**
+     * Отобразить историю сообщений.
+     */
+    private void displayHistory() {
+
+        LinkedList<String> messageList = new LinkedList<String>();
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(historyFile))) {
+
+            // Считать из файла необходимое количество последних строк истории
+            String messageLine;
+            while ((messageLine = reader.readLine()) != null) {
+
+                messageList.addLast(messageLine);
+
+                if (messageList.size() > COUNT_OF_LAST_MESSAGE) {
+                    messageList.removeFirst();
+                }
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // Отобразить считанные строки на экране
+        for (String message : messageList) {
+            controller.displayMessage(message);
+        }
+    }
+
+
+
+    /**
+     * Отобразить сообщение на экране.
+     * @param message отображаемое сообщение.
+     * @param addHistory true - сообщение сохраняется в файле истории, false - не сохраняется.
+     */
+    private void displayMessage(String message, boolean addHistory) {
+
+        controller.displayMessage(message);
+
+        if (addHistory) {
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(historyFile, true))) {
+
+                writer.write(message);
+                writer.write("\n");
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
 
     private void initializeNetwork() throws IOException {
         socket = new Socket(CommonConstants.SERVER_ADDRESS, CommonConstants.SERVER_PORT);
@@ -64,22 +139,32 @@ public class Network {
     }
 
     public boolean sendAuth(String login, String password) {
+
+        boolean authenticated = false;
+
         try {
             if (socket == null || socket.isClosed()) {
                 initializeNetwork();
             }
             outputStream.writeUTF(ServerCommandConstants.AUTHORIZATION + " " + login + " " + password);
 
-            boolean authenticated = inputStream.readUTF().startsWith(ServerCommandConstants.AUTHORIZATION_OK);
-            if (authenticated) {
+            String input = inputStream.readUTF();
+            if (input.startsWith(ServerCommandConstants.AUTHORIZATION_OK)) {
+                authenticated = true;
+
+                String[] message = input.split("\\s");
+                historyFile = new File(String.format("history_%s.txt", message[1]));
+                System.out.println(historyFile.getAbsolutePath());
+
                 startReadServerMessages();
             }
             return authenticated;
+
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        return false;
+        return authenticated;
     }
 
     public void closeConnection() {
