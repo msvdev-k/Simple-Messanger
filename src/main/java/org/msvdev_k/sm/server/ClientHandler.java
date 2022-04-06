@@ -1,5 +1,8 @@
 package org.msvdev_k.sm.server;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -10,6 +13,9 @@ import java.net.Socket;
  * Класс, отвечающий за обмен сообщениями между клиентами и сервером.
  */
 public class ClientHandler {
+
+    private static final Logger LOGGER = LogManager.getLogger(ClientHandler.class);
+
 
     /**
      * Экземпляр класса сервера.
@@ -66,6 +72,7 @@ public class ClientHandler {
             }).start();
 
         } catch (IOException exception) {
+            LOGGER.error("Проблемы при создании обработчика");
             throw new RuntimeException("Проблемы при создании обработчика");
         }
     }
@@ -129,6 +136,7 @@ public class ClientHandler {
                 String[] authInfo = messageInChat.split("\\s");
 
                 if (authInfo[0].equals(ServerCommandConstants.SHUTDOWN)) {
+                    LOGGER.info(String.format("Клиент %s отключился.", nickName));
                     return;
 
                 } else if (authInfo[0].equals(ServerCommandConstants.MESSAGE_TO_USER)) {

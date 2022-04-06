@@ -2,7 +2,6 @@ package org.msvdev_k.sm.server;
 
 import org.msvdev_k.sm.CommonConstants;
 import org.msvdev_k.sm.server.authorization.AuthService;
-import org.msvdev_k.sm.server.authorization.InMemoryAuthService;
 import org.msvdev_k.sm.server.authorization.SQLiteAuthService;
 
 import java.io.IOException;
@@ -12,11 +11,17 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 
 /**
  * Класс, описывающий логику сервера.
  */
 public class Server {
+
+    private static final Logger LOGGER = LogManager.getLogger(Server.class);
+
 
     /**
      * Сервис аутентификации.
@@ -37,21 +42,23 @@ public class Server {
         try (ServerSocket server = new ServerSocket(CommonConstants.SERVER_PORT)) {
 
             authService.start();
+            LOGGER.info("Запущен сервер аутентификации");
 
             while (true) {
-                System.out.println("Сервер ожидает подключения");
+                LOGGER.info("Сервер ожидает подключения");
                 Socket socket = server.accept();
 
-                System.out.println("Клиент подключился");
+                LOGGER.info("Клиент подключился");
                 new ClientHandler(this, socket);
             }
 
         } catch (IOException | SQLException exception) {
-            System.out.println("Ошибка в работе сервера");
+            LOGGER.error("Ошибка в работе сервера");
             exception.printStackTrace();
 
         } finally {
             authService.end();
+            LOGGER.info("Остановлен сервер аутентификации");
         }
     }
 
